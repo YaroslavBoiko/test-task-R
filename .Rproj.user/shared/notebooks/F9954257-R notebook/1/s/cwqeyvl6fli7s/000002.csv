@@ -1,8 +1,0 @@
-"0","with_var_but_wthout_week <- copy(copy)"
-"0",""
-"0","copy[, week:= as.numeric(week)]"
-"0",""
-"0","## Calculate the number of observations for conditions"
-"0","#nrow(copy[week > 29])"
-"0",""
-"0","copy <- copy[week > 29]"

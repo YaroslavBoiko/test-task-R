@@ -1,6 +1,0 @@
-"0","# I added all variables from feature selection which are highly important for log_price"
-"0","first1 <- lm(formula = log_volume ~ log_units + log_price + cat + subcat + promo + log_cpi + year + week + month + xms + halloween, data = copy)"
-"0","# I delete seasonality."
-"0","second2 <- lm(formula = log_volume ~ log_units + log_price + cat + subcat + promo + log_cpi +  xms + halloween + (prexms*xms*newyear) , data = copy)"
-"0","# I added interaction term prexms*xms*newyear."
-"0","third3 <-lm(formula = log_volume ~ log_units + log_price + cat + subcat + promo + log_cpi + year + week + month + xms + halloween + (prexms*xms*newyear) , data = copy)"

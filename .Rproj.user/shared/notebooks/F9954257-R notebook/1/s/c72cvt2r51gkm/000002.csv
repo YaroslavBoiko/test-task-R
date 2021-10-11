@@ -1,1 +1,0 @@
-"0","copy[, avg_volume := mean(volume), by = .(copy$cat_subcat)]"

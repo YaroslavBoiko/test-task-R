@@ -1,5 +1,0 @@
-"0","copy[, log_cpi := ifelse(copy$cpi>0.01, log(copy$cpi), NA)]"
-"0","#boxplot(copy$log_cpi)"
-"0",""
-"0","copy[, log_cpi := (ifelse(copy$cpi == 0, log(0.01), log_cpi))]"
-"0","boxplot(copy$log_cpi)"

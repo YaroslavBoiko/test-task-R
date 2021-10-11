@@ -1,6 +1,0 @@
-"0","# analysis difference between similar subcat but same cat"
-"0","copy[,"
-"0","        lapply(.SD, sum),"
-"0","        by=.(cat),"
-"0","        .SDcols=c(""promo""),"
-"0","        ][order(-promo)]"

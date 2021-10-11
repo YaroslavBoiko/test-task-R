@@ -1,3 +1,0 @@
-"0","library(data.table)"
-"0","raw_input <- fread(""inputs/raw_input.csv"")"
-"0","holidays <- fread(""inputs/holidays.csv"")"

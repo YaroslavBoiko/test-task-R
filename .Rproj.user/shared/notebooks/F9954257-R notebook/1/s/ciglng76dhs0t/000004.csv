@@ -1,3 +1,0 @@
-"0",""
-"0","copy[, log_cpi := (ifelse(is.na(copy$cpi), 0, log_cpi))]"
-"0","boxplot(copy$log_cpi)"

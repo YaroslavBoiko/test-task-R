@@ -1,8 +1,0 @@
-"0","# analysis for number of observations grouped by cat"
-"0","for_test_w <- copy[,"
-"0","        .N,"
-"0","        by=.(cat),"
-"0","        ][order(-N)]"
-"0",""
-"0","ggplot(for_test_w, aes(x="""", y=N, fill=cat))+"
-"0","geom_bar(width = 1, stat = ""identity"")"

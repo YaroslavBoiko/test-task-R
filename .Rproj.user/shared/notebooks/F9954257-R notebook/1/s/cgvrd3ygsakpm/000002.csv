@@ -1,8 +1,0 @@
-"0","reserve <- copy(copy)"
-"0",""
-"0","# Dataset preparation"
-"0","copy[, log_units:=log(units)]"
-"0","# boxplot(copy$log_units)"
-"0",""
-"0","copy <- copy(copy[, c('cat',	'subcat', 'value',	'volume',	'units', 'log_units','promo',	'year',	'week',	'month', 'avg_volume',	'price',	'price_var', 'log_price',	'log_volume',	'total_value',	'total_volume',	'cpi', 'log_cpi', 'prexms', 'xms', 'easter',	'halloween',	'newyear',	'valentine')])"
-"0","copy[, c(""cpi""):=NULL]"
