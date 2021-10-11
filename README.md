@@ -9,5 +9,5 @@ Follow the next steps:
 3. Use the R-notebook.html file to explore the data and understand the tasks you should complete.
 
 # Results
-- **R notebook.Rmd** - *R script* (with outputs and charts)
-- **Summary_Report.pdf** - *Summary* (with outputs, charts and conclusions)
+- **R notebook.Rmd** - R script (with outputs and charts)
+- **Summary_Report.pdf** - Summary (with outputs, charts and conclusions)
