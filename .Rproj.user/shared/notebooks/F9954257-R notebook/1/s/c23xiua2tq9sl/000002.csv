@@ -1,0 +1,2 @@
+"0","# check first five rows of the raw_input table"
+"0","head(raw_input, 5)"

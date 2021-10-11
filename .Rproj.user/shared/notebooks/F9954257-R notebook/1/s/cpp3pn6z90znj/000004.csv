@@ -1,0 +1,4 @@
+"0",""
+"0","ggplot(test, aes(x="""", y=value, fill=cat))+"
+"0","geom_bar(width = 1, stat = ""identity"")+ "
+"0","  coord_polar(""y"", start=0)"

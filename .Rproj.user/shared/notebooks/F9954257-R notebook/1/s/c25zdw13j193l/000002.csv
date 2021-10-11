@@ -1,0 +1,2 @@
+"0","# with logarithmic values in 'price' column and 'volume' column"
+"0","plot_ly(x=copy$log_volume, y=copy$log_price, z=copy$cat, type=""scatter3d"", mode=""markers"", color=copy$promo)"

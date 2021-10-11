@@ -1,0 +1,490 @@
+---
+title: "R programming"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+### Input data description
+Current project contains two tables: **raw_input.csv** and **holidays.csv**
+
+```{r echo=FALSE}
+library(data.table)
+raw_input <- fread("inputs/raw_input.csv")
+holidays <- fread("inputs/holidays.csv")
+```
+
+
+```{r}
+# check first five rows of the raw_input table
+head(raw_input, 5)
+```
+
+* **cat**       - category name, higher level of granularity   
+* **subcat**    - subcategory, lower level of granularity   
+* **date**      - period in format 'week number, year'   
+* **value**     - revenue sales   
+* **volume**    - volume sales   
+* **units**     - unit sales   
+* **promo**     - a flag that shows whether any promotions have been applied (1) or not (0) in current week.  
+
+**Note, the concatenation of ```cat``` and ```subcat``` variables is considered as a pair (pair level).**
+
+
+```{r}
+# review the holidays data
+head(holidays, 5)
+```
+ **holidays.csv** - it's a calendar that contains six different holidays.    
+ The holiday dates are in the **%d%b%Y (ddMTHyyyy)** format, e.g. 27MAR2016.
+ 
+ 
+### Requirements:
+
+ 1. Implement all tasks using ```data.table``` R library. 
+ 2. For some specific calculations (date transformations, linear regression, charts, etc.) use special R packages (```lubridate```, ```ISOweek```, ```gam```, ```ggplot2```, etc.).     
+ 3. Write clear comments across all functions. 
+ 4. Share your intermediate and final results (R script, outputs, charts, reports) via Git repo (you can use GitHub or GitLab account).
+
+### Deliverables: 
+**Prepare full R Markdown Report/R notebook that will contain detailed description of Exploratory Data Analysis, Feature Extraction, Modeling and Post-modeling analysis with conclusions and explanations.**   
+
+What will be assessed: 
+
+* The way you're thinking - what actions you're implementing and why.
+* Code style (please follow best practices).  
+* Suggestions on the additional analytics/approaches which could be applied.  
+
+ 
+## Technical tasks
+
+```{r}
+# necessary libraries
+library(data.table)
+library(dplyr)
+library(ISOweek)
+library(fasttime)
+library(lme4)
+library(r2mlm)
+library(performance)
+library(Boruta)
+library(MLmetrics)
+library(rlang)
+library(tidyverse)
+library(plotly)
+# library(staTools)
+library(smooth)
+library(plotrix)
+```
+
+```{r}
+# check first five rows of the raw_input table
+head(raw_input, 5)
+```
+
+
+### Quality Check/EDA of the raw input data
+1. Read the raw input data
+2. Use domain knowledge to conduct an initial QC and EDA on the input data (conduct the Data Inspection, Data Cleansing&Coercion, etc.). 
+Prepare a summary based on the results.
+
+```{r}
+# read data
+raw_input <- fread("inputs/raw_input.csv")
+
+# delate NA`s from initial data
+copy <- copy(na.omit(raw_input))
+
+# some data manipulation
+copy[, cat_subcat := paste(copy$cat, copy$subcat)]
+```
+
+```{r}
+# EDA
+boxplot(copy$value)
+boxplot(copy$volume)
+boxplot(copy$units)
+boxplot(copy$promo)
+```
+
+### Data Manipulation & Transformation
+
+1. **Aggregate numeric variables** (use SUM as agg function) by categorical variables and ```promo```.    
+Please, use ```apply``` family functions and ```.SD``` for column subsetting.  
+```{r}
+# analysis for number of observations grouped by cat
+for_test_w <- copy[,
+        .N,
+        by=.(cat),
+        ][order(-N)]
+
+ggplot(for_test_w, aes(x="", y=N, fill=cat))+
+geom_bar(width = 1, stat = "identity")
+
+ggplot(for_test_w, aes(x="", y=N, fill=cat))+
+geom_bar(width = 1, stat = "identity")+ 
+  coord_polar("y", start=0)
+```
+
+```{r}
+# analysis for the sum of promo grouped by cat 
+for_test_a <- copy[,
+        lapply(.SD, sum),
+        by=.(cat),
+        .SDcols=c("promo"),
+        ][order(-promo)]
+
+ggplot(for_test_a, aes(x="", y=promo, fill=cat))+
+geom_bar(width = 1, stat = "identity")
+
+ggplot(for_test_a, aes(x="", y=promo, fill=cat))+
+geom_bar(width = 1, stat = "identity")+ 
+  coord_polar("y", start=0)
+```
+
+```{r}
+# analysis difference between similar subcat but same cat
+copy[,
+        lapply(.SD, sum),
+        by=.(cat),
+        .SDcols=c("promo"),
+        ][order(-promo)]
+
+copy[,
+        .N,
+        by=.(subcat),
+        ]
+
+copy[,
+        .N,
+        by=.(cat, subcat),
+        ]
+```
+
+```{r}
+# analysis for the sum of volume grouped by cat
+test <- copy[,
+        lapply(.SD, sum),
+        by=.(cat),
+        .SDcols=c("volume"),
+        ][order(-volume)]
+
+ggplot(test, aes(x="", y=volume, fill=cat))+
+geom_bar(width = 1, stat = "identity")
+
+ggplot(test, aes(x="", y=volume, fill=cat))+
+geom_bar(width = 1, stat = "identity")+ 
+  coord_polar("y", start=0)
+```
+
+```{r}
+# analysis for the sum of value grouped by cat
+test <- copy[,
+        lapply(.SD, sum),
+        by=.(cat),
+        .SDcols=c("value"),
+        ][order(-value)]
+
+ggplot(test, aes(x="", y=value, fill=cat))+
+geom_bar(width = 1, stat = "identity")
+
+ggplot(test, aes(x="", y=value, fill=cat))+
+geom_bar(width = 1, stat = "identity")+ 
+  coord_polar("y", start=0)
+```
+
+```{r}
+# analysis for the sum of units grouped by cat
+test <- copy[,
+        lapply(.SD, sum),
+        by=.(cat),
+        .SDcols=c("units"),
+        ][order(-units)]
+
+ggplot(test, aes(x="", y=units, fill=cat))+
+geom_bar(width = 1, stat = "identity")
+
+ggplot(test, aes(x="", y=units, fill=cat))+
+geom_bar(width = 1, stat = "identity")+ 
+  coord_polar("y", start=0)
+```
+
+3. Based on the ```date``` column, **add new date variables** to the main dataset:   
+* ```year_week``` in the ```yyyyww``` format (e.g., 202051, 201836)   
+* ```month``` in the ```%b``` (```MTH```) format (JAN, DEC, etc.)     
+* ```full_date``` in the ```%Y-%m-%d```	(```yyyy-mm-dd```) format (e.g., 2017-02-05)  
+
+**_Be careful with week #53 and note that Saturday, Sunday, Thursday or Monday can be used as the first day of the week_**.
+```{r}
+# * ```year_week``` in the ``` yyyyww``` format (e.g., 202051, 201836)   
+copy[, year := gsub(" ", "", paste('20', substr(copy$date,5,6)))]
+copy[, week := substr(copy$date,2,3)]
+copy[, year_week := gsub(" ", "", paste(year, week))]
+
+# * ```month``` in the ```%b``` (```MTH```) format (JAN, DEC, etc.)  
+# * ```full_date``` in the ```%Y-%m-%d```	(```yyyy-mm-dd```) format (e.g., 2017-02-05) # done on the previous step 
+# **_Be careful with week #53 and note that Saturday, Sunday, Thursday or Monday can be used as the first day of the week_**.
+copy[, specific_year_week2 := paste(copy$year, copy$week, sep = "-") ]
+copy[, specific_year_week3 := sub("(\\d{4}-)(\\d{2})", "\\1W\\2-1", specific_year_week2)]
+copy[, final_date := ISOweek2date(specific_year_week3)]
+
+Sys.setlocale(category = "LC_TIME", locale="en_GB.UTF-8")
+copy[, month := toupper(format(final_date, "%b",locale = locale("en")) )]
+copy[, c("specific_year_week2", "specific_year_week3"):=NULL]
+```
+
+4. **Process holidays**:
+* Read **holidays.csv** dataset.   
+* Add dummy variable to the input data for each holiday.    
+If a specific week contains a holiday, use flag 1, in other cases 0.
+
+After these pre-processing your dataset should look something like this:   
+![](../test task R/hol.png)
+
+```{r}
+# 4. **Process holidays**:
+holidays <- fread("inputs/holidays.csv") 
+holidays[,prexms := as.Date(prexms, "%d%B%Y")]
+
+# it seems that when was initialization there were some problems with the timezone (but I solved it)
+copy[, final_date_minus_one := as.Date(final_date)-1]
+
+Sys.setlocale("LC_TIME", "C")
+
+holidays[,prexms := as.Date(prexms, "%d%b%Y")]
+holidays[,xms := as.Date(xms, "%d%b%Y")]
+holidays[,easter := as.Date(easter, "%d%b%Y")]
+holidays[,halloween := as.Date(halloween, "%d%b%Y")]
+holidays[,newyear := as.Date(newyear, "%d%b%Y")]
+holidays[,valentine := as.Date(valentine, "%d%b%Y")]
+
+copy[, prexms := ifelse(copy$final_date_minus_one %in% holidays$prexms, 1, 0)]
+copy[, xms := ifelse(copy$final_date_minus_one %in% holidays$xms, 1, 0)]
+copy[, easter := ifelse(copy$final_date_minus_one %in% holidays$easter, 1, 0)]
+copy[, halloween := ifelse(copy$final_date_minus_one %in% holidays$halloween, 1, 0)]
+copy[, newyear := ifelse(copy$final_date_minus_one %in% holidays$newyear, 1, 0)]
+copy[, valentine := ifelse(copy$final_date_minus_one %in% holidays$valentine, 1, 0)]
+
+copy[, full_date := final_date_minus_one]
+copy[, c("final_date_minus_one","final_date"):=NULL]
+
+# copy[, cat_subcat := paste(copy$cat, copy$subcat)] # already done
+setcolorder(copy, c('cat', 'subcat', 'cat_subcat','promo','date', 'year', 'week', 'year_week', 'month','full_date', 'prexms', 'xms', 'easter', 'halloween', 'newyear', 'valentine'))
+```
+
+5. **Calculate new variables & add all of them to the main dataset**:
+
++ ```price``` as ```value/volume```     
+If ```price``` has infinite values, replace price with 0.
+```{r}
+copy[, price := value/volume]
+copy[, price := ifelse(is.infinite(copy$price), 0, copy$price)]
+
+#boxplot(copy$price)
+copy <- copy[price>0]
+boxplot(copy$price)
+```
+
++ Calculate coefficient of variation for ```price``` variable   
+Remove observations where coefficient of variation > 2 or is NA.   
+```{r}
+copy[, price_var := var(price), by = .(copy$cat_subcat)]
+#boxplot(copy$price_var)
+#summary(copy)
+#nrow(copy)
+
+whithout_var_cuting_copy <- copy(copy)
+
+#nrow(copy[price_var<2.01])
+copy <- copy[price_var<2.01]
+
+boxplot(copy$price_var)
+summary(copy)
+```
+
++ Generate log variable for price (```log_price```)   
+If ```log_price``` = 0, apply ```log_price``` = 0.01.
+```{r}
+copy[, log_price := log10(copy$price)]
+copy[, log_price := ifelse(copy$log_price == 0, 0.01, copy$log_price)]
+
+boxplot(copy$log_price)
+summary(copy)
+```
+
++ Calculate average value (```avg_volume```) for ```volume```. For grouping use ```cat``` and ```subcat``` variables.
+```{r}
+copy[, avg_volume := mean(volume), by = .(copy$cat_subcat)]
+```
+
++ Calculate log volume.   
+If ```log_volume``` = 0, replace ```log_volume``` with 0.01. 
+```{r}
+copy[, log_volume := log10(copy$volume)]
+#boxplot(copy$log_volume)
+#summary(copy)
+
+copy[, log_volume := ifelse(copy$log_volume==0, 0.01, copy$log_volume)]
+#boxplot(copy$log_volume)
+#summary(copy)
+
+#nrow(copy[is.finite(copy$log_volume)])
+#summary(copy[is.finite(copy$log_volume)])
+copy <- copy[is.finite(copy$log_volume)]
+```
+
++ Remove items where number of weeks on the **pair level** < 30.
+```{r}
+with_var_but_wthout_week <- copy(copy)
+
+copy[, week:= as.numeric(week)]
+
+## Calculate the number of observations for conditions
+#nrow(copy[week > 29])
+
+copy <- copy[week > 29]
+```
+
++ Calculate CPI (Competitor Price Index).   
+Calculate and add to the main dataset all additional variables that are needed for this.   
+Note, to calculate total value and total volume use grouping by ```subcategory``` and ```year_week```.   
+```{r}
+copy[, total_value := sum(value), by = .(copy$subcat,copy$year_week) ]
+copy[, total_volume := sum(volume), by = .(copy$subcat,copy$year_week) ]
+#summary(copy)
+#boxplot(copy)
+
+# possible culations (option 1)
+#copy[, cpi := ((total_value/total_volume))]
+# possible culations (option 2)
+#copy[, cpi := ((total_value/total_volume)/price)]
+# possible culations (final option)
+copy[, cpi := (((total_value-value)/(total_volume-volume))/price)]
+boxplot(copy$cpi)
+```
+
++ Calculate log(cpi).   
+If ```cpi``` > 0.01, use log(cpi). 
+If ```cpi``` = 0, use log(0.01).  
+If ```cpi``` is infinite or NA, use ```log_cpi``` = 0.
+
+```{r}
+copy[, log_cpi := ifelse(copy$cpi>0.01, log(copy$cpi), NA)]
+#boxplot(copy$log_cpi)
+
+copy[, log_cpi := (ifelse(copy$cpi == 0, log(0.01), log_cpi))]
+boxplot(copy$log_cpi)
+
+copy[, log_cpi := (ifelse(is.na(copy$cpi), 0, log_cpi))]
+boxplot(copy$log_cpi)
+```
+
+
+### Regression analysis
+```{r}
+reserve <- copy(copy)
+
+# Dataset preparation
+copy[, log_units:=log(units)]
+# boxplot(copy$log_units)
+
+copy <- copy(copy[, c('cat',	'subcat', 'value',	'volume',	'units', 'log_units','promo',	'year',	'week',	'month', 'avg_volume',	'price',	'price_var', 'log_price',	'log_volume',	'total_value',	'total_volume',	'cpi', 'log_cpi', 'prexms', 'xms', 'easter',	'halloween',	'newyear',	'valentine')])
+copy[, c("cpi"):=NULL]
+```
+
+Three-dimensional graph (on the X-axis - price scale on the Y-axis - volume scale on the z-cat axis) color indicates 0 - the absence of promo; 1 - the presence of promo.
+```{r}
+plot_ly(x=copy$price, y=copy$volume, z=copy$cat, type="scatter3d", mode="markers", color=copy$promo)
+```
+
+```{r}
+# with logarithmic values in 'price' column and 'volume' column
+plot_ly(x=copy$log_volume, y=copy$log_price, z=copy$cat, type="scatter3d", mode="markers", color=copy$promo)
+```
+
+```{r}
+# Features selection process (using Boruta)
+boruta_output <- Boruta(log_volume ~ ., data=copy, doTrace=0)  
+
+boruta_signif <- getSelectedAttributes(boruta_output, withTentative = TRUE)
+print(boruta_signif)  
+
+roughFixMod <- TentativeRoughFix(boruta_output)
+boruta_signif <- getSelectedAttributes(roughFixMod)
+print(boruta_signif)
+
+# variable Importance Scores
+imps <- attStats(roughFixMod)
+imps2 = imps[imps$decision != 'Rejected', c('meanImp', 'decision')]
+head(imps2[order(-imps2$meanImp), ])  # descending sort
+res_features <- imps2[order(-imps2$meanImp),]
+
+# ploting result
+plot(boruta_output, cex.axis=.7, las=2, xlab="", main="Variable Importance")  
+```
+
+As a result we have this:
+![](../test task R/Rplot.png)
+
+
+1. Build several **multilevel regression models with interactions term**. Choose best one based on statistical tests.  
+As dependent variable use ```log_volume```.  
+As predictors can be used the following variables: ```log_price```, ```promo```, ```holidays```, ```seasonality``` (use ```month``` variable for this), ```log_cpi```, etc.
+
+```{r}
+# I added all variables from feature selection which are highly important for log_price
+first1 <- lm(formula = log_volume ~ log_units + log_price + cat + subcat + promo + log_cpi + year + week + month + xms + halloween, data = copy)
+# I delete seasonality.
+second2 <- lm(formula = log_volume ~ log_units + log_price + cat + subcat + promo + log_cpi +  xms + halloween + (prexms*xms*newyear) , data = copy)
+# I added interaction term prexms*xms*newyear.
+third3 <-lm(formula = log_volume ~ log_units + log_price + cat + subcat + promo + log_cpi + year + week + month + xms + halloween + (prexms*xms*newyear) , data = copy)
+```
+
+```{r}
+# summary analysis
+summary(first1)
+summary(second2)
+summary(third3)
+```
+
+```{r}
+# plot analysis
+plot(first1)
+plot(second2)
+plot(third3)
+```
+
+2. Calculate all possible evaluation metrics, such as ```Rsq```,  ```rss```, ```tss```, ```mpe```, ```mape```, etc.
+```{r}
+# rsq 
+# (sum((mod$fitted.values - mean(copy$log_volume))^2))/(sum((copy$log_volume - mean(copy$log_volume))^2))
+summary(first1)$r.squared 
+summary(second2)$r.squared 
+summary(third3)$r.squared 
+
+# rss
+# sum((copy$log_volume - third3$fitted.values)^2)
+anova(first1)["Residuals", "Sum Sq"]
+anova(second2)["Residuals", "Sum Sq"]
+anova(third3)["Residuals", "Sum Sq"]
+
+# tss
+sum((copy$log_volume - mean(copy$log_volume))^2)
+
+# mpe 
+MPE(first1$fitted.values, copy$log_volume)
+MPE(second2$fitted.values, copy$log_volume)
+MPE(third3$fitted.values, copy$log_volume)
+
+# mape 
+MAPE(first1$fitted.values, copy$log_volume)
+MAPE(second2$fitted.values, copy$log_volume)
+MAPE(third3$fitted.values, copy$log_volume)
+``` 
+3. Provide summary results also on the pair level (aggregate results by ```cat``` & ```subcat``` vars).
+3. Using ```ggplot2``` R library build all necessary charts.
+4. Create report on modeling and post-modeling results.
+
+***
+##### The expected time to complete this task is up to four hours.
+**Good luck!**

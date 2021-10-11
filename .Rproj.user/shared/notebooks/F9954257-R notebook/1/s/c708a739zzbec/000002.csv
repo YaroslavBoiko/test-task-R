@@ -1,0 +1,6 @@
+"0","copy[, price := value/volume]"
+"0","copy[, price := ifelse(is.infinite(copy$price), 0, copy$price)]"
+"0",""
+"0","#boxplot(copy$price)"
+"0","copy <- copy[price>0]"
+"0","boxplot(copy$price)"

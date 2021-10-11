@@ -1,0 +1,4 @@
+"0","copy[, log_price := log10(copy$price)]"
+"0","copy[, log_price := ifelse(copy$log_price == 0, 0.01, copy$log_price)]"
+"0",""
+"0","boxplot(copy$log_price)"
